@@ -1,42 +1,88 @@
-import puppeteer from 'puppeteer'
+import puppeteer, { Browser, Page } from 'puppeteer'
 import fs from 'fs'
 
-const config = {
+interface Config {
+  page: string,
+  dailyUsagePage: string,
+  username: string | undefined,
+  password: string | undefined
+}
+
+const config: Config = {
   page: 'https://logowanie.tauron-dystrybucja.pl/logged-out?service=https://elicznik.tauron-dystrybucja.pl',
-  username: '',
-  password: ''
+  dailyUsagePage: '/energia',
+  username: process.env.USERNAME,
+  password: process.env.PASSWORD
 };
 
 (async () => {
+  ValidateConfig(config)
+
+  const controlls = await initialize()
+  await login(controlls.page)
+  await debug(controlls.page)
+  await navigateToDailyUsage(controlls.page)
+  const usage = await getUsage(controlls.page)
+  console.log(`Usage: ${usage}`)
+
+  await teardown(controlls.browser)
+})()
+
+async function initialize (): Promise<{ page: Page, browser: Browser }> {
   const browser = await puppeteer.launch()
   const page = await browser.newPage()
-
   await page.goto(config.page, { waitUntil: 'networkidle0' })
 
   // Set screen size
   await page.setViewport({ width: 1080, height: 1024 })
 
-  // Type into search box
-  await page.type('#username1', config.username)
-  await page.type('#password1', config.password)
+  return { page, browser }
+}
 
-  // Wait and click on first result
-  const pageContent = await page.content()
-  await fs.writeFile('page-content.html', pageContent, (err) => console.log(err))
+async function login (page: Page): Promise<void> {
+  await page.type('#username1', config.username!)
+  await page.type('#password1', config.password!)
 
   const selector = '.button-pink'
   await page.click(selector)
+  await page.waitForSelector('.energyConsum')
+}
+
+async function navigateToDailyUsage (page: Page): Promise<void> {
+  await page.click(`a[href='${config.dailyUsagePage}']`)
+  await page.waitForSelector('canvas')
+}
+
+async function getUsage (page: Page): Promise<number> {
+  const totalUsage = await page.$('#consum')
+  const textContent = await (await totalUsage?.getProperty('textContent'))?.jsonValue()
+  const value = textContent?.replace('kWh', '') ?? '-1'
+
+  return Number(value.replace(',', '.'))
+}
+
+async function teardown (browser: Browser): Promise<void> {
+  await browser.close()
+}
+
+async function debug (page: Page): Promise<void> {
+  const pageContent = await page.content()
+  await fs.writeFile('page-content.html', pageContent, (err) => {
+    if (err != null) {
+      console.log(err)
+    }
+  })
 
   await page.screenshot({
     path: 'page.png'
   })
+}
 
-  const emailSelector = await page.waitForSelector('.not-only-navigation')
-
-  const fullTitle = await emailSelector!.evaluate(el => el.textContent)
-
-  // Print the full title
-  console.log('Logged user: "%s".', fullTitle)
-
-  await browser.close()
-})()
+function ValidateConfig (config: Config) {
+  if (config.username == null) {
+    throw new Error('Username empty')
+  }
+  if (config.password == null) {
+    throw new Error('Password empty')
+  }
+}

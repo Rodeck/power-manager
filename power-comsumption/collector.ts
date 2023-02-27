@@ -1,5 +1,5 @@
 import puppeteer, { Browser, Page } from 'puppeteer'
-import fs from 'fs'
+import * as fs from 'fs'
 
 interface Config {
   page: string,
@@ -13,20 +13,7 @@ const config: Config = {
   dailyUsagePage: '/energia',
   accountUsername: process.env.USERNAME,
   accountPassword: process.env.PASSWORD
-};
-
-(async () => {
-  ValidateConfig(config)
-
-  const controlls = await initialize()
-  await login(controlls.page)
-  await debug(controlls.page)
-  await navigateToDailyUsage(controlls.page)
-  const usage = await getUsage(controlls.page)
-  console.log(`Usage: ${usage}`)
-
-  await teardown(controlls.browser)
-})()
+}
 
 async function initialize (): Promise<{ page: Page, browser: Browser }> {
   const browser = await puppeteer.launch()
@@ -79,10 +66,24 @@ async function debug (page: Page): Promise<void> {
 }
 
 function ValidateConfig (config: Config) {
-  if (config.username == null) {
+  if (config.accountUsername == null) {
     throw new Error('Username empty')
   }
-  if (config.password == null) {
+  if (config.accountPassword == null) {
     throw new Error('Password empty')
   }
+}
+
+export default async () => {
+  ValidateConfig(config)
+
+  const controlls = await initialize()
+  await login(controlls.page)
+  await debug(controlls.page)
+  await navigateToDailyUsage(controlls.page)
+  const usage = await getUsage(controlls.page)
+  console.log(`Usage: ${usage}`)
+
+  await teardown(controlls.browser)
+  return usage
 }

@@ -4,15 +4,15 @@ import fs from 'fs'
 interface Config {
   page: string,
   dailyUsagePage: string,
-  username: string | undefined,
-  password: string | undefined
+  accountUsername: string | undefined,
+  accountPassword: string | undefined
 }
 
 const config: Config = {
   page: 'https://logowanie.tauron-dystrybucja.pl/logged-out?service=https://elicznik.tauron-dystrybucja.pl',
   dailyUsagePage: '/energia',
-  username: process.env.USERNAME,
-  password: process.env.PASSWORD
+  accountUsername: process.env.USERNAME,
+  accountPassword: process.env.PASSWORD
 };
 
 (async () => {
@@ -40,8 +40,8 @@ async function initialize (): Promise<{ page: Page, browser: Browser }> {
 }
 
 async function login (page: Page): Promise<void> {
-  await page.type('#username1', config.username!)
-  await page.type('#password1', config.password!)
+  await page.type('#username1', config.accountUsername!)
+  await page.type('#password1', config.accountPassword!)
 
   const selector = '.button-pink'
   await page.click(selector)

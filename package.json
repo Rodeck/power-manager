@@ -9,7 +9,7 @@
     "start": "node dist/app.js",
     "build": "babel src --out-dir dist --no-copy-ignored",
     "dev": "nodemon src/index.ts",
-    "test": "jest"
+    "test": "jest --passWithNoTests"
   },
   "keywords": [
     "typescript",
